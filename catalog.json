@@ -1,1 +1,12 @@
-{"version":1,"notes":"","app":{"version":1,"url":"https://github.com/ЛОГИН/РЕПО/releases/latest","notes":""},"items":{}}
+{
+ "version": 2,
+ "notes": "",
+ "app": {
+  "version": 1.1,
+  "url": "https://github.com/ЛОГИН/РЕПО/releases/latest",
+  "notes": ""
+ },
+ "items": {
+  "ant": "Патч"
+ }
+}
