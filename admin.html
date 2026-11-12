@@ -1,0 +1,27 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Админка FPV</title>
+<style>body{font:15px system-ui,sans-serif;background:#f3f4f8;color:#1b1f24;margin:0}.w{max-width:760px;margin:0 auto;padding:14px}.c{background:#fff;border:1px solid #dde;border-radius:12px;padding:14px;margin-bottom:12px}input,select,button{font:inherit;padding:9px;border:1px solid #ccd;border-radius:8px;margin:3px 0;width:100%}button{background:#e8590c;color:#fff;border:0;cursor:pointer}button.x{width:auto;background:#c92a2a;padding:2px 9px;margin-left:8px}li{margin:4px 0}small{color:#667}</style></head><body><div class="w">
+<h1>🛠 Админка каталога FPV</h1>
+<div class="c"><b>Подключение к GitHub</b><input id="o" placeholder="Логин GitHub"><input id="r" placeholder="Репозиторий"><input id="t" type="password" placeholder="Токен (Contents: Read and write)"><button id="ld">Загрузить каталог</button><small>Токен хранится только в этом браузере.</small></div>
+<div id="ed" style="display:none">
+<div class="c"><b>Добавить деталь</b><select id="k"></select><div id="f"></div><button id="ad">Добавить в список</button></div>
+<div class="c"><b>Добавленные детали</b><div id="ls"></div></div>
+<div class="c"><b>Новая версия APK (по желанию)</b><input id="av" placeholder="Номер версии (должен совпадать с APP_VERSION в config.js)"><input id="an" placeholder="Что нового"></div>
+<div class="c"><b>Публикация</b><input id="nt" placeholder="Описание обновления для пользователей"><button id="pb">🚀 Опубликовать обновление</button><p id="ms"></p></div></div></div>
+<script>
+var LB={frame:"Рама",motor:"Моторы",prop:"Пропеллеры",esc:"ESC",fc:"FC",cam:"Камера",vtx:"VTX",rx:"Приёмник ELRS",bat:"Батарея",gps:"GPS",gog:"Очки",tx:"Пульт",ant:"Антенна"};
+var SC={frame:["Название","Размер винтов, ″ (например 5)","Стек: 16, 20, 30 (через / если несколько)","Размеры моторов: 22,23"],motor:["Название","Статор: 22","Винты: 5,6","Мин. ток ESC, A","Макс. S"],prop:["Название","Размер, ″"],esc:["Название","Стек: 16, 20 или 30","Ток, A","Макс. S"],fc:["Название","Стек: 16, 20 или 30","Число UART"],cam:["Название","Система: an / dji / ws / hdz"],vtx:["Название","Система: an / dji / ws / hdz"],gog:["Название","Система: an / dji / ws / hdz"],rx:["Название","Частота: 2.4 или 915"],tx:["Название","Частота: 2.4 или 915"],bat:["Название","Число S","Ёмкость, мАч"],gps:["Название"],ant:["Название"]};
+var C,SHA="",$=function(i){return document.getElementById(i)},H=function(){return{Authorization:"Bearer "+$("t").value.trim(),Accept:"application/vnd.github+json"}},U=function(){return"https://api.github.com/repos/"+$("o").value.trim()+"/"+$("r").value.trim()+"/contents/catalog.json"};
+["o","r","t"].forEach(function(i){$(i).value=localStorage.getItem("adm_"+i)||""});
+$("k").innerHTML=Object.keys(LB).map(function(k){return'<option value="'+k+'">'+LB[k]+"</option>"}).join("");
+function form(){$("f").innerHTML=SC[$("k").value].map(function(h,i){return'<input class="fi" placeholder="'+h+'">'}).join("")}$("k").onchange=form;form();
+function list(){var h="";Object.keys(C.items).forEach(function(k){var a=C.items[k].split(";").filter(Boolean);if(a.length)h+="<b>"+LB[k]+"</b><ul>"+a.map(function(x,i){return"<li>"+x.split("|")[0]+' <small>('+x+')</small><button class="x" onclick="del(\''+k+"',"+i+')">×</button></li>'}).join("")+"</ul>"});$("ls").innerHTML=h||"<small>Пока ничего нет</small>"}
+function del(k,i){var a=C.items[k].split(";").filter(Boolean);a.splice(i,1);C.items[k]=a.join(";");list()}
+$("ld").onclick=async function(){["o","r","t"].forEach(function(i){localStorage.setItem("adm_"+i,$(i).value.trim())});
+var r=await fetch(U(),{headers:H()});if(r.status==404){C={version:0,notes:"",app:{version:1,url:"https://github.com/"+$("o").value.trim()+"/"+$("r").value.trim()+"/releases/latest",notes:""},items:{}};SHA=""}
+else if(!r.ok){alert("Ошибка "+r.status+": проверьте логин, репозиторий и токен");return}else{var j=await r.json();SHA=j.sha;C=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,"")))))}
+$("ed").style.display="block";list()};
+$("ad").onclick=function(){var v=[].map.call(document.querySelectorAll(".fi"),function(e){return e.value.trim().replace(/[;|]/g," ")});if(!v[0]){alert("Введите название");return}var k=$("k").value;C.items[k]=(C.items[k]?C.items[k]+";":"")+v.join("|");form();list()};
+$("pb").onclick=async function(){C.version=(+C.version||0)+1;C.notes=$("nt").value.trim();if($("av").value.trim()){C.app.version=+$("av").value.trim();C.app.notes=$("an").value.trim()}
+var b={message:"Обновление каталога v"+C.version,content:btoa(unescape(encodeURIComponent(JSON.stringify(C,null,1))))};if(SHA)b.sha=SHA;
+var r=await fetch(U(),{method:"PUT",headers:H(),body:JSON.stringify(b)});if(r.ok){var j=await r.json();SHA=j.content.sha;$("ms").textContent="✅ Опубликовано (версия "+C.version+"). Пользователи увидят предложение обновить в течение нескольких минут."}else{C.version--;$("ms").textContent="❌ Ошибка "+r.status}};
+</script></body></html>
